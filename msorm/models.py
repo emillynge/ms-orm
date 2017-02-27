@@ -1,6 +1,26 @@
+from collections import UserDict, namedtuple
+
 from .login import Requester
 import builtins
 import re
+import functools
+from itertools
+
+class need_properties:
+    def __init__(self, *property_names):
+        self.props = property_names
+
+    def __call__(_self, method):
+
+        @functools.wraps(method)
+        def wrapper(self, *args, **kwargs):
+            if not all(hasattr(self, prop) and getattr(self, prop) is not None for prop in _self.props):
+                raise ValueError(f'One or more propersites is missing or unset: {props}')
+            return method(self, *args, **kwargs)
+        return wrapper
+
+need_ids = need_properties('ids')
+
 
 class Filter(list):
     typecasts = re.compile('([a-z]+)\((.+)\)')
@@ -75,11 +95,29 @@ class Filter(list):
         return _filters
 
 
-class ModelBase:
+class ModelBase(UserDict):
     model_name = None
-    def __init__(self, requester: Requester, model_name=None):
+    def __init__(self, requester: Requester, model_name=None, entries: dict=None):
         self.name = model_name or self.model_name
         self.req = requester
+        fields = next(iter(entries.values()))._fields if entries else tuple()
+        self.entry_type = namedtuple(f'{self.__class__.__name__}Entry', fields)
+        entries = entries or dict()
+        super().__init__((i, self.entry_type(*entry)) for i, entry in entries.items())
+
+    def _set(self, entry_list, fields, prev_entries):
+        self.entry_type = namedtuple(self.entry_type.__name__, [*self.entry_type._fields, *fields])
+        def get_values(ent):
+            for field in fields:
+                yield ent[field]
+
+        for entry in entry_list:
+            i = entry.pop('id')
+            self[i] = self.entry_type(*self[i], *get_values(entry))
+
+    @property
+    def ids(self):
+        return list(self.ids)
 
     async def execute_kw(self, *args, **kwargs):
         return await self.req.execute_kw(self.name, *args, **kwargs)
@@ -87,10 +125,36 @@ class ModelBase:
     async def get_fields(self):
         return await self.execute_kw('fields_get', [], attributes=['string', 'help', 'type'])
 
-    async def get_entries(self, *fields, filters=tuple(), **kwargs):
-        _filters = Filter.make_filters(filters)
+    async def get_entries(self, *fields, ids=tuple(), filters=tuple(), **kwargs):
+        if not ids or filters:
+            raise ValueError(f'"ids" and "filters" cannot both be None')
+
+        args = list()
+        if ids:
+            args.append(ids)
+
+        if filters:
+            args.append(Filter.make_filters(filters))
+
         kwargs['fields'] = fields
-        return await self.execute_kw('search_read', [_filters], **kwargs)
+        return await self.execute_kw('search_read', args, **kwargs)
+
+    async def set_with_filter(self, filters):
+        self.ids = [d['id'] for d in (await self.get_entries('id', filters=filters))]
+        return self
+
+    def set_with_ids(self, ids):
+        self.ids = ids
+        return self
+
+    @classmethod
+    def _from_ids(cls, instance: "ModelBase", ids):
+        return cls(requester=instance.req, model_name=instance.model_name, ids=ids)
+
+    @need_ids
+    def subset_from_filter(self, filter):
+        
+
 
 
 def set_name(name):
@@ -118,3 +182,7 @@ class Event(ModelBase):
 
 class Member(ModelBase):
     model_name = 'member.member'
+
+class Registration(ModelBase):
+    model_name = 'event.registration'
+
