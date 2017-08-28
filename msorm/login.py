@@ -234,10 +234,13 @@ class Requester:
             else:
                 raise
 
-        await self.login()
+        await self.login(force=True)
         return self.models.execute_kw(self.cred.db, self.cred.uid, self.cred.dbpass, *args, kwargs)
 
-    async def login(self):
+    async def login(self, force=False):
+        if 'uid' in self.cred.storage and not force:
+            return
+
         uid = await self.common.authenticate(self.cred.db, self.cred.mno, self.cred.dbpass, {})
         if uid is not False:
             self.cred.uid = uid
@@ -266,11 +269,15 @@ choice: """))
                 del self.cred._passwords['dbpass']
         await self.login()
 
-    def __enter__(self):
+    async def __aenter__(self):
+        await self.login()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
+
+    async def __aexit__(self, *args):
+        return self.__exit__(*args)
 
     def close(self):
         self.common.close()
