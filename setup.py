@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='ms-orm',
-    version='1.0.0',
+    version='1.1.0',
     packages=['msorm'],
     url='https://github.com/emillynge/ms-orm',
     install_requires=[
