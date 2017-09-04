@@ -52,19 +52,16 @@ async def get_signup_data(main_event_code, requester: Requester, other_event_cod
     profile_filter = Filter('active') == True
     profile_filter += Filter('member_id').In(*(reg['member_id'][0] for reg in registrations if reg['member_id']))
 
-    prev_course_filters = [Filter('event_id') == e['id'] for e in other_events]
-    for prev_course_filter in prev_course_filters:
-         Filter('member_id').In(*(reg['member_id'][0] for reg in registrations if reg['member_id'])) + prev_course_filter
+    prev_course_filter = Filter('event_id').In(*(e['id'] for e in other_events))
+    prev_course_filter += Filter('member_id').In(*(reg['member_id'][0] for reg in registrations if reg['member_id']))
 
-    logging.debug('fetching answers, profiles and prev courses')
-    answers, profiles, *prev_course_registrations = await asyncio.gather(
+    print('fetching answers, profiles and prev courses')
+    answers, profiles, prev_course_registrations = await asyncio.gather(
         answer_req.get_entries(filters=answer_filt),
         profile_req.get_entries(filters=profile_filter),
-        *(reg_req.get_entries('event_id', 'member_id', filters=prev_course_filter)
-          for prev_course_filter in prev_course_filters),
+        reg_req.get_entries('event_id', 'member_id', filters=prev_course_filter),
     )
 
-    prev_course_registrations = list(chain(*prev_course_registrations))
 
     rid2answers = defaultdict(lambda :defaultdict(list))
     for answer in answers:
