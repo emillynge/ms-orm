@@ -1,3 +1,4 @@
+import logging
 from collections import UserDict, namedtuple
 import sys
 from typing import List, Dict, Any
@@ -188,7 +189,9 @@ class ModelBase(UserDict):
             fields = self.default_fields
 
         kwargs['fields'] = fields
-        return await self.execute_kw(action, args, **kwargs)
+        res = await self.execute_kw(action, args, **kwargs)
+        logging.debug(f'Fetched {len(res)} {self.__class__.__name__} entries')
+        return res
 
     async def set_with_filter(self, filters):
         self.ids = [

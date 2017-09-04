@@ -161,6 +161,7 @@ async def main(*_):
     async with Requester(creds) as req:
         signups = await get_signup_data(
             '17500',
+            requester=req,
             other_event_codes=event_codes,
             questions_of_interest={"Vælg kurser": list(),
                                    "Er du Søspejder?": "Nej"},
