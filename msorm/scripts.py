@@ -7,13 +7,14 @@ from .login import Credentials, Requester
 from .models import Event, Filter, Registration, Profile, Answer, Question
 import logging
 
-
 class States(IntEnum):
     open = 0  # Bekræftet
-    cancel = 1  # Afmeldt
-    manual = 2  # Afventer godkendelse
-    annul = 3  # Annuleret
-    draft = 4   # kladde - endnu ikke synlig i tilmeldingslisten
+    moved = 1  # Flyttet til andet kursus
+    cancel = 2  # Afmeldt
+    manual = 3  # Afventer godkendelse
+    waitinglist = 4
+    annul = 5  # Annuleret
+    draft = 6   # kladde - endnu ikke synlig i tilmeldingslisten
 
 
 async def get_signup_data(main_event_code, requester: Requester, other_event_codes, questions_of_interest: dict,
@@ -54,6 +55,7 @@ async def get_signup_data(main_event_code, requester: Requester, other_event_cod
 
     prev_course_filter = Filter('event_id').In(*(e['id'] for e in other_events))
     prev_course_filter += Filter('member_id').In(*(reg['member_id'][0] for reg in registrations if reg['member_id']))
+    prev_course_filter += Filter("state") == "open"
 
     print('fetching answers, profiles and prev courses')
     answers, profiles, prev_course_registrations = await asyncio.gather(
