@@ -106,35 +106,34 @@ class Storage(SectionProxy):
 
 
 class CredentialsBase(ABC):
-    @abstractmethod
     @property
+    @abstractmethod
     def mno(self) -> int:
         pass
 
 
-    @abstractmethod
     @property
+    @abstractmethod
     def db(self) -> str:
         pass
 
-    @abstractmethod
     @property
+    @abstractmethod
     def domain(self) -> str:
         pass
 
-
-    @abstractmethod
     @property
+    @abstractmethod
     def dbpass(self) -> str:
         pass
 
-    @abstractmethod
     @property
+    @abstractmethod
     def uid(self) -> str:
         pass
 
-    @abstractmethod
     @uid.setter
+    @abstractmethod
     def uid(self, uid: Union[str, type(None)]):
         pass
 
