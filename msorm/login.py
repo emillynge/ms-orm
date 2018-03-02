@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from xmlrpc.client import ServerProxy
 
 import functools
@@ -13,6 +14,9 @@ import xmlrpc
 import asyncio
 from aioxmlrpc.client import ServerProxy as AioServerProxy
 from configparser import ConfigParser
+
+from typing import Any, Union
+
 CONFIG_DIR = pathlib.Path(os.environ.get('MS_CONFIG_DIR', default='~/.ms'))
 from pprint import pprint
 
@@ -101,7 +105,53 @@ class Storage(SectionProxy):
             self._parser.write(fp)
 
 
-class Credentials:
+class CredentialsBase(ABC):
+    @abstractmethod
+    @property
+    def mno(self) -> int:
+        pass
+
+
+    @abstractmethod
+    @property
+    def db(self) -> str:
+        pass
+
+    @abstractmethod
+    @property
+    def domain(self) -> str:
+        pass
+
+
+    @abstractmethod
+    @property
+    def dbpass(self) -> str:
+        pass
+
+    @abstractmethod
+    @property
+    def uid(self) -> str:
+        pass
+
+    @abstractmethod
+    @uid.setter
+    def uid(self, uid: Union[str, type(None)]):
+        pass
+
+    @abstractmethod
+    def get_or_set(self, key, prompt: str, passw=False, force=False) -> Any:
+        pass
+
+    @abstractmethod
+    def clear(self, key):
+        pass
+
+
+class Credentials(CredentialsBase):
+    def clear(self, key):
+        if key in self._passwords:
+            self._passwords.pop(key)
+
     def __init__(self, ms_conf_dir: Path=None, **conf_overrides):
         self.ms_conf_dir = (ms_conf_dir or CONFIG_DIR).expanduser()
         self._config: ConfigParser = None
@@ -212,7 +262,9 @@ class Credentials:
 
     @property
     def uid(self):
-        return int(self.storage['uid'])
+        if 'uid' in self.storage:
+            return int(self.storage['uid'])
+        return None
 
     @uid.setter
     def uid(self, val):
@@ -220,7 +272,7 @@ class Credentials:
 
 
 class Requester:
-    def __init__(self, credentials: Credentials):
+    def __init__(self, credentials: CredentialsBase):
         self.cred = credentials
         self.common = AioServerProxy(f'https://{self.cred.domain}/xmlrpc/2/common')
         self.models = AioServerProxy(f'https://{self.cred.domain}/xmlrpc/2/object')
@@ -238,7 +290,7 @@ class Requester:
         return self.models.execute_kw(self.cred.db, self.cred.uid, self.cred.dbpass, *args, kwargs)
 
     async def login(self, force=False):
-        if 'uid' in self.cred.storage and not force:
+        if self.cred.uid is not None and not force:
             return
 
         uid = await self.common.authenticate(self.cred.db, self.cred.mno, self.cred.dbpass, {})
@@ -265,8 +317,7 @@ choice: """))
                 sys.exit()
             else:
                 raise NotImplementedError()
-            if 'dbpass' in self.cred._passwords:
-                del self.cred._passwords['dbpass']
+            self.cred.clear('dbpass')
         await self.login()
 
     async def __aenter__(self):
