@@ -1,21 +1,23 @@
 import asyncio
 from collections import defaultdict
-from enum import IntEnum
+from enum import Enum
 from itertools import chain
+from operator import itemgetter
 
 from .login import Credentials, Requester
 from .models import Event, Filter, Registration, Profile, Answer, Question
 import logging
 
-class States(IntEnum):
-    open = 0  # Bekræftet
-    moved = 1  # Flyttet til andet kursus
-    cancel = 2  # Afmeldt
-    manual = 3  # Afventer godkendelse
-    waitinglist = 4
-    annul = 5  # Annuleret
-    draft = 6   # kladde - endnu ikke synlig i tilmeldingslisten
-
+class State(Enum):
+    CONFIRMED = "open"      # Bekræftet
+    MOVED = "moved"         # Flyttet til andet kursus
+    CANCELLED = "cancel"    # Afmeldt
+    AWAITING = "manual"     # Afventer godkendelse
+    WAITLIST = "waitinglist"# På venteliste
+    REJECTED = "annul"      # Annuleret
+    DRAFTED = "draft"       # kladde - endnu ikke synlig i tilmeldingslisten
+    DIDNOTFINISH = "notdone"# Ikke gennemført (der menes sikker at kurset ikke blev gennemført)
+    DIDNOTATTEND = "noshow" # Ikke mødt op  (der menes sikker at man ikke var der til kursusstart)
 
 async def get_signup_data(main_event_code, requester: Requester, other_event_codes, questions_of_interest: dict,
                           limit=None):
@@ -55,13 +57,14 @@ async def get_signup_data(main_event_code, requester: Requester, other_event_cod
 
     prev_course_filter = Filter('event_id').In(*(e['id'] for e in other_events))
     prev_course_filter += Filter('member_id').In(*(reg['member_id'][0] for reg in registrations if reg['member_id']))
-    prev_course_filter += Filter("state") == "open"
+    prev_course_filter += Filter("state").In(State.CONFIRMED.value, State.WAITLIST.value, State.CANCELLED.value,
+                                             State.DIDNOTFINISH.value, State.REJECTED.value, State.DIDNOTATTEND.value)
 
     print('fetching answers, profiles and prev courses')
     answers, profiles, prev_course_registrations = await asyncio.gather(
         answer_req.get_entries(filters=answer_filt),
         profile_req.get_entries(filters=profile_filter),
-        reg_req.get_entries('event_id', 'member_id', filters=prev_course_filter),
+        reg_req.get_entries('event_id', 'member_id', 'state', filters=prev_course_filter),
     )
 
 
@@ -78,30 +81,39 @@ async def get_signup_data(main_event_code, requester: Requester, other_event_cod
 
     eid2event_code = dict((e['id'], e['event_code']) for e in other_events)
 
-    getattr(States, 'annul')
     mid2reg = dict()
+    registrations.sort(key=itemgetter('id'), reverse=True)
     for r in registrations:
         if not r['member_id']:
             continue
 
         mid = r['member_id'][0]
-        state = getattr(States, r['state'])
         if mid in mid2reg:
-            state = getattr(States, r['state'])
-            existing_state = getattr(States, mid2reg[mid]['state'])
-            if state > existing_state:
-                continue
-            if state == existing_state:
-                id = r['id']
-                existing_id = mid2reg[mid]['id']
-                if id < existing_id:
-                    continue
+            continue
 
         mid2reg[mid] = r
 
+    prev_course_registrations.sort(key=itemgetter('id'), reverse=True)
+    seen = set()
     mid2prev_courses = defaultdict(list)
+    mid2prev_waitlists = defaultdict(list)
     for pc in prev_course_registrations:
-        mid2prev_courses[pc['member_id'][0]].append(eid2event_code[pc['event_id'][0]])
+        event_id = pc['event_id'][0]
+        member_id = pc['member_id'][0]
+        hash_pair = (member_id, event_id)
+        if hash_pair in seen:
+            continue
+
+        seen.add(hash_pair)
+        state = State(pc['state'])
+        if state == State.WAITLIST:
+            d = mid2prev_waitlists
+        elif state in (State.CONFIRMED, State.DIDNOTFINISH):
+            d = mid2prev_courses
+        else:
+            continue
+
+        d[member_id].append(eid2event_code[event_id])
 
 
     signups = dict()
@@ -125,6 +137,7 @@ async def get_signup_data(main_event_code, requester: Requester, other_event_cod
                     member_number=profile['member_number'],
                     name=profile['member_id'][1],
                     prev_courses=mid2prev_courses[mid],
+                    prev_waitlists=mid2prev_waitlists[mid],
                     )
 
         reg = mid2reg[mid]
