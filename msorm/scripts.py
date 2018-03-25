@@ -164,7 +164,7 @@ async def get_signup_data(main_event_code,
         if state == State.MOVED.value and mid2assigned_state[mid]:
             state = f'{state}_{mid2assigned_state[mid].value}'
 
-        data.update(state=reg['state'])
+        data.update(state=state)
         answer = rid2answers[reg['id']]
 
         for question_name, default_value in questions_of_interest.items():
