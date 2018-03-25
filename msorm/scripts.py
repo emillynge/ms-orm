@@ -19,7 +19,10 @@ class State(Enum):
     DIDNOTFINISH = "notdone"# Ikke gennemført (der menes sikker at kurset ikke blev gennemført)
     DIDNOTATTEND = "noshow" # Ikke mødt op  (der menes sikker at man ikke var der til kursusstart)
 
-async def get_signup_data(main_event_code, requester: Requester, other_event_codes, questions_of_interest: dict,
+async def get_signup_data(main_event_code,
+                          requester: Requester,
+                          other_event_codes,
+                          questions_of_interest: dict,
                           limit=None):
     logging.debug('Example: show basic info for all members you have access to')
     event_req = Event(requester)
@@ -33,6 +36,7 @@ async def get_signup_data(main_event_code, requester: Requester, other_event_cod
     main_event = (await event_req.get_entries('registration_ids',
                                               'name',
                                               'event_question_ids',
+                                              'event_moveto_ids',
                                               filters=Filter('event_code') == main_event_code))[0]
 
     logging.debug('fetching events, questions and registrations')
@@ -93,10 +97,14 @@ async def get_signup_data(main_event_code, requester: Requester, other_event_cod
 
         mid2reg[mid] = r
 
+    assignable_courses = set(main_event['event_moveto_ids'])
+
     prev_course_registrations.sort(key=itemgetter('id'), reverse=True)
     seen = set()
     mid2prev_courses = defaultdict(list)
     mid2prev_waitlists = defaultdict(list)
+    mid2assigned_courses = defaultdict(list)
+    mid2assigned_state = defaultdict(lambda: None)
     for pc in prev_course_registrations:
         event_id = pc['event_id'][0]
         member_id = pc['member_id'][0]
@@ -106,7 +114,17 @@ async def get_signup_data(main_event_code, requester: Requester, other_event_cod
 
         seen.add(hash_pair)
         state = State(pc['state'])
-        if state == State.WAITLIST:
+
+        if event_id in assignable_courses:
+            d = mid2assigned_courses
+            if member_id in mid2assigned_state:
+                continue
+
+            mid2assigned_state[member_id] = state
+            if state not in (State.CONFIRMED, State.DIDNOTFINISH):
+                continue
+
+        elif state == State.WAITLIST:
             d = mid2prev_waitlists
         elif state in (State.CONFIRMED, State.DIDNOTFINISH):
             d = mid2prev_courses
@@ -138,9 +156,14 @@ async def get_signup_data(main_event_code, requester: Requester, other_event_cod
                     name=profile['member_id'][1],
                     prev_courses=mid2prev_courses[mid],
                     prev_waitlists=mid2prev_waitlists[mid],
+                    assigned_courses=mid2assigned_courses[mid]
                     )
 
         reg = mid2reg[mid]
+        state = reg['state']
+        if state == State.MOVED.value and mid2assigned_state[mid]:
+            state = f'{state}_{mid2assigned_state[mid].value}'
+
         data.update(state=reg['state'])
         answer = rid2answers[reg['id']]
 
