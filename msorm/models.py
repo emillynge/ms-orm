@@ -112,7 +112,7 @@ class ModelBase(UserDict):
     def __init__(self,
                  requester: Requester,
                  model_name=None,
-                 entries: List[Dict[str, Any]]=None):
+                 entries: List[Dict[str, Any]] = None):
         self.name = model_name or self.model_name
         self.req = requester
         if entries:
@@ -241,6 +241,40 @@ class ModelOverview(ModelBase):
 
 class Event(ModelBase):
     model_name = 'event.event'
+    permitted_fields = [
+        'badge_innerleft', 'use_seats_min', 'ask_phone', 'country_id', 'date_end',
+        'write_uid', 'date_end_located', 'ask_name', 'require_schoolclass', 'email_confirmation_id',
+        'email_cancellation_id', 'date_publish_end', 'message_summary', 'max_age', 'registration_enable_terms',
+        'display_name', 'cabin_rent', 'seats_min', 'show_tracks', 'ask_gender', 'use_event_number',
+        'company_id', 'dynaview_updating', 'event_ticket_ids', 'menu_id', 'allowed_track_tag_ids',
+        'price_leaders', 'allow_cancellation', 'badge_back', 'organization_type_id', 'twitter_hashtag',
+        'seats_max', 'refresh_dynaview', 'export_code', 'remote_url', 'ask_schoolclass', 'require_ckr_check',
+        'use_leaderprice', 'seats_used', 'name', 'use_allow_leaderprice', 'date_registration_begin',
+        'allow_registration_editing', 'model_object_field', 'use_teaser', 'require_permission_photo',
+        'require_handicap', 'use_moveto', 'website_message_ids', 'notes', 'message_follower_ids', 'create_date',
+        'event_moveto_ids', 'use_terms', 'query', 'duration', 'use_location', 'seats_waitinglist', 'use_export_codes',
+        'attachment_ids', 'organization_registration_terms', 'ask_address', 'state', 'field_data', 'use_cabin_rent',
+        'show_menu', 'ask_organization', 'model_id', 'track_ids', 'use_registration_editing',
+        'is_open_for_public_registrations', 'date_begin', 'min_age', 'copyvalue', 'seats_manual', 'count_tracks',
+        'course_certificate_description', 'use_sub_organization_tags', 'organizer_id', 'message_unread',
+        'is_web_public', 'use_allow_all_users_to_register', 'ask_permission_photo', 'require_phone', 'address_id',
+        'require_diseases', 'event_period_ids', 'message_last_post', 'function_ids', 'price', 'require_name',
+        'sub_object', 'create_uid', 'registration_ids', 'message_is_follower', '__last_update', 'tag_ids',
+        'date_begin_located', 'ask_scout_name', 'date_publish_begin', 'allow_all_users_to_register', 'event_code',
+        'null_value', 'require_gender', 'ask_email', 'type', 'date_tz', 'blog_id', 'count_registrations',
+        'use_duration', 'ask_mobile', 'use_team', 'organization_id', 'use_age_restrictions', 'teaser',
+        'seats_max_nocompute', 'ask_handicap', 'require_birthdate', 'registration_terms', 'use_lock_event',
+        'last_cancellation', 'locked', 'use_cancellation', 'seats_available', 'require_other_info', 'ask_birthdate',
+        'tracks_tag_ids', 'require_mobile', 'sub_model_object_field', 'website_meta_keywords', 'timezone_of_event',
+        'use_publication_dates', 'email_registration_id', 'require_scout_name', 'date_registration_end',
+        'is_subscribed', 'sponsor_ids', 'show_track_proposal', 'last_registration_editing', 'sub_organization_ids',
+        'use_invoicepayment', 'id', 'is_accounting_enabled', 'seats_reserved', 'require_organization', 'remote_id',
+        'resp_partner_id', 'message_ids', 'enable_track', 'use_allow_invoicepayment', 'website_meta_title',
+        'ask_other_info', 'xml_tree_view', 'website_published', 'website_url', 'remote_update', 'description',
+        'require_login', 'ask_diseases', 'dynaview_id', 'show_blog', 'registration_non_draft_ids', 'write_date',
+        'require_address', 'can_edit', 'event_question_ids', 'user_id', 'website_meta_description',
+        'use_course_certificate', 'badge_innerright', 'seats_unconfirmed', 'reply_to', 'use_multi_periods',
+        'require_email']
 
     registration_ids: List[int]
     name: str
@@ -304,7 +338,6 @@ class Member(ModelBase):
         'organization_structure_parent_id',
         'active_profile_ids',
     ]
-
 
 
 class Profile(ModelBase):
@@ -383,6 +416,7 @@ class Profile(ModelBase):
         'organization_structure_parent_id',
     ]
 
+
 class Membership(ModelBase):
     model_name = 'member.membership'
 
@@ -390,8 +424,10 @@ class Membership(ModelBase):
 class Registration(ModelBase):
     model_name = 'event.registration'
 
+
 class Question(ModelBase):
     model_name = 'event.question'
+
 
 class Answer(ModelBase):
     model_name = 'event.question.response'
