@@ -4,6 +4,7 @@ from enum import Enum
 from itertools import chain
 from operator import itemgetter
 
+from msorm.utils import cosine_compare_to_list
 from .login import Credentials, Requester
 from .models import Event, Filter, Registration, Profile, Answer, Question
 import logging
@@ -52,6 +53,14 @@ async def get_signup_data(main_event_code,
     )
 
     relevant_questions = [q for q in questions if q['name'] in questions_of_interest.keys()]
+    question_names = set(q['name'] for q in relevant_questions)
+    for q in questions_of_interest:
+        if q not in question_names:
+            candidates = cosine_compare_to_list(q, (q['name'] for q in questions), 0.5)
+            if candidates:
+                logging.error(f"The question '{q}' was not found in the event. perhaps you meant one of: {'|'.join(candidates)}")
+            else:
+                logging.error(f"The question '{q}' was not found in the event.")
 
     answer_filt = Filter('event_question_id').In(*(q['id'] for q in relevant_questions))
     answer_filt += Filter('event_id') == main_event["id"]
