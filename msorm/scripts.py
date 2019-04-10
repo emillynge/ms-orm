@@ -116,6 +116,11 @@ async def get_signup_data(main_event_code,
     mid2assigned_state = defaultdict(lambda: None)
     for pc in prev_course_registrations:
         event_id = pc['event_id'][0]
+        event_code = eid2event_code[event_id]
+        if event_code == main_event_code:
+            # Ignore state of current waitlist
+            continue
+
         member_id = pc['member_id'][0]
         hash_pair = (member_id, event_id)
         if hash_pair in seen:
