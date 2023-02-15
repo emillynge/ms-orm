@@ -58,7 +58,7 @@ async def get_signup_data(main_event_code,
         if q not in question_names:
             candidates = cosine_compare_to_list(q, (q['name'] for q in questions), 0.5)
             if candidates:
-                logging.error(f"The question '{q}' was not found in the event. perhaps you meant one of: {'|'.join(candidates)}")
+                logging.error(f"The question '{q}' was not found in the event. perhaps you meant one of: \"{'|'.join(candidates)}\"")
             else:
                 logging.error(f"The question '{q}' was not found in the event.")
 

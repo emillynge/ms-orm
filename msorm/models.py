@@ -1,7 +1,7 @@
 import logging
 from collections import UserDict, namedtuple
 import sys
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 from aioxmlrpc.client import Fault
 
@@ -156,8 +156,8 @@ class ModelBase(UserDict):
     async def for_entries_request(cls,
                                   requester,
                                   *fields,
-                                  ids=tuple(),
-                                  filters=tuple(),
+                                  ids: Optional[List]=None,
+                                  filters: Optional[List]=None,
                                   model_name=None,
                                   **kwargs):
         return cls(
@@ -168,11 +168,16 @@ class ModelBase(UserDict):
 
     async def get_entries(self,
                           *fields,
-                          ids=tuple(),
-                          filters=tuple(),
+                          ids: Optional[List]=None,
+                          filters: Optional[List]=None,
                           **kwargs):
-        if not ids and not filters:
+        if ids is None and filters is None:
             raise ValueError(f'"ids" and "filters" cannot both be None')
+
+        if not ids and not filters:
+            logging.warning(f"Getting no entries for {self.__class__.model_name} "
+                            f"{fields}. both filter and ids are empty")
+            return list()
 
         action = 'search_read'
         args = list()

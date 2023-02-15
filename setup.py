@@ -11,6 +11,7 @@ setup(
         'keyring>=10.2',
         'aioxmlrpc',
         'aiohttp',
+        'pandas',
         'json_tricks'
     ],
     license='Apache',
